@@ -12,9 +12,9 @@
 [![](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fossrs%2Fsrs.svg?type=small)](https://app.fossa.com/projects/git%2Bgithub.com%2Fossrs%2Fsrs?ref=badge_small)
 [![](https://ossrs.net/wiki/images/srs-faq.svg)](https://ossrs.net/lts/zh-cn/faq)
 [![](https://badgen.net/badge/srs/stackoverflow/orange?icon=terminal)](https://stackoverflow.com/questions/tagged/simple-realtime-server)
-[![](https://opencollective.com/srs-server/tiers/badge.svg)](https://opencollective.com/srs-server/contribute)
+[![](https://opencollective.com/srs-server/tiers/badge.svg)](https://opencollective.com/srs-server)
 [![](https://img.shields.io/docker/pulls/ossrs/srs)](https://hub.docker.com/r/ossrs/srs/tags)
-[![](https://ossrs.net/wiki/images/do-btn-srs-125x20.svg)](https://cloud.digitalocean.com/droplets/new?appId=133468816&size=s-1vcpu-512mb-10gb&region=sgp1&image=ossrs-srs&type=applications)
+[![](https://ossrs.net/wiki/images/do-btn-srs-125x20.svg)](https://cloud.digitalocean.com/droplets/new?appId=133468816&size=s-2vcpu-2gb&region=sgp1&image=ossrs-srs&type=applications)
 [![](https://api.securityscorecards.dev/projects/github.com/ossrs/srs/badge)](https://api.securityscorecards.dev/projects/github.com/ossrs/srs)
 [![](https://bestpractices.coreinfrastructure.org/projects/5619/badge)](https://bestpractices.coreinfrastructure.org/projects/5619)
 
@@ -104,15 +104,24 @@ Here are some other important wikis:
 * Usage: What are the strategies for improving edge performance on multiple CPUs? ([CN](https://ossrs.net/lts/zh-cn/docs/v5/doc/reuse-port), [EN](https://ossrs.io/lts/en-us/docs/v5/doc/reuse-port))
 * Usage: How can bugs be reported or contact be made with us? ([CN](https://ossrs.net/lts/zh-cn/contact), [EN](https://ossrs.io/lts/en-us/contact))
 
+## Sponsor
+
+Would you like additional assistance from us? By becoming a sponsor or backer of SRS, we can provide you 
+with the support you need:
+
+* Backer: $5 per month, online text chat support through Discord.
+* Sponsor: $100 per month, online meeting support, 1 meeting per month in 1 hour.
+
+Please visit [OpenCollective](https://opencollective.com/srs-server) to become a backer or sponsor, and send 
+us a direct message on [Discord](https://discord.gg/yZ4BnPmHAd). We are currently providing support to the 
+developers listed below:
+
+[![](https://opencollective.com/srs-server/backers.svg?width=800&button=false)](https://opencollective.com/srs-server)
+
+We at SRS aim to establish a non-profit, open-source community that assists developers worldwide in creating 
+your own high-quality streaming and RTC platforms to support your businesses.
+
 ## AUTHORS
-
-We highly appreciate all our contributors for their significant contributions that have made a remarkable difference. 
-Thank you! 🙏
-
-If you wish to support this project financially, you can donate [through Open Collective](https://opencollective.com/srs-server). 
-We appreciate your contribution!
-
-[![](https://opencollective.com/srs-server/backers.svg?width=800&button=true)](https://opencollective.com/srs-server/contribute/backer-34941/checkout?interval=month&amount=5)
 
 The [TOC(Technical Oversight Committee)](trunk/AUTHORS.md#toc) and [contributors](trunk/AUTHORS.md#contributors):
 
@@ -150,7 +159,10 @@ some third-party libraries are distributed under their [licenses](https://ossrs.
 
 ## Releases
 
+* 2023-08-31, [Release v6.0-d1](https://github.com/ossrs/srs/releases/tag/v6.0-d1), v6.0-d1, 6.0 dev1, v6.0.72, 167135 lines.
 * 2023-07-09, [Release v6.0-d0](https://github.com/ossrs/srs/releases/tag/v6.0-d0), v6.0-d0, 6.0 dev0, v6.0.59, 166739 lines.
+* 2023-08-31, [Release v5.0-b4](https://github.com/ossrs/srs/releases/tag/v5.0-b4), v5.0-b4, 5.0 beta4, v5.0.176, 162919 lines.
+* 2023-08-02, [Release v5.0-b3](https://github.com/ossrs/srs/releases/tag/v5.0-b3), v5.0-b3, 5.0 beta3, v5.0.170, 162704 lines.
 * 2023-07-09, [Release v5.0-b2](https://github.com/ossrs/srs/releases/tag/v5.0-b2), v5.0-b2, 5.0 beta2, v5.0.166, 162520 lines.
 * 2023-06-11, [Release v5.0-b1](https://github.com/ossrs/srs/releases/tag/v5.0-b1), v5.0-b1, 5.0 beta1, v5.0.157, 162494 lines.
 * 2023-05-14, [Release v5.0-b0](https://github.com/ossrs/srs/releases/tag/v5.0-b0), v5.0-b0, 5.0 beta0, v5.0.155, 162600 lines.
