@@ -233,6 +233,11 @@ srs_error_t SrsSrtServer::accept_srt_client(srs_srt_t srt_fd)
     }
     srs_assert(resource);
     
+    int max_connections = _srs_config->get_max_connections();
+    if ((int)conn_manager_->size() >= max_connections) {
+        return srs_error_new(ERROR_EXCEED_CONNECTIONS, "drop fd=%d, max=%d, cur=%d for exceed connection limits",
+            srt_fd, max_connections, (int)conn_manager_->size());
+    }
     // directly enqueue, the cycle thread will remove the client.
     conn_manager_->add(resource);
 
