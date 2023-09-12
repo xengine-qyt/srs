@@ -450,7 +450,7 @@ srs_error_t SrsStatistic::on_client(std::string id, SrsRequest* req, ISrsExpire*
 
     nb_clients_++;
 
-	int max_streams = _srs_config->get_max_playstream() + 1;
+	int max_streams = _srs_config->get_max_playstreams() + 1;
 	if (stream->nb_clients >= max_streams) {
 		return srs_error_new(ERROR_EXCEED_CONNECTIONS, "drop id=%s, max=%d, cur=%d for exceed play stream limits",
 			id.c_str(), max_streams, stream->nb_clients);

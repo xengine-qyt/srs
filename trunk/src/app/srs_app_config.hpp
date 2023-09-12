@@ -194,7 +194,7 @@ public:
     virtual SrsConfDirective* get(std::string _name);
     // Get the directive by name and its arg0, return the first match.
     virtual SrsConfDirective* get(std::string _name, std::string _arg0);
-    // RAW
+    // RAW 
 public:
     virtual SrsConfDirective* get_or_create(std::string n);
     virtual SrsConfDirective* get_or_create(std::string n, std::string a0);
@@ -256,6 +256,19 @@ private:
     virtual srs_error_t read_token(srs_internal::SrsConfigBuffer* buffer, std::vector<std::string>& args, int& line_start, SrsDirectiveState& state);
 };
 
+// The state for reloading config.
+enum SrsReloadState {
+    SrsReloadStateInit = 0,
+    // Start to parse the new config file.
+    SrsReloadStateParsing = 10,
+    // Start to transform the new config file to new version.
+    SrsReloadStateTransforming = 20,
+    // Start to apply the new config file.
+    SrsReloadStateApplying = 30,
+    // The reload is finished.
+    SrsReloadStateFinished = 90,
+};
+
 // The config service provider.
 // For the config supports reload, so never keep the reference cross st-thread,
 // that is, never save the SrsConfDirective* get by any api of config,
@@ -308,7 +321,7 @@ public:
     virtual void unsubscribe(ISrsReloadHandler* handler);
     // Reload  the config file.
     // @remark, user can test the config before reload it.
-    virtual srs_error_t reload();
+    virtual srs_error_t reload(SrsReloadState *pstate);
 private:
     // Reload  the vhost section of config.
     virtual srs_error_t reload_vhost(SrsConfDirective* old_root);
@@ -400,7 +413,7 @@ public:
     //       of SRS.
     virtual int get_max_connections();
     //Get the maximum that each stream can pull
-    virtual int get_max_playstream();
+    virtual int get_max_playstreams();
     // Get the listen port of SRS.
     // user can specifies multiple listen ports,
     // each args of directive is a listen port.
