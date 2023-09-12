@@ -194,7 +194,7 @@ public:
     virtual SrsConfDirective* get(std::string _name);
     // Get the directive by name and its arg0, return the first match.
     virtual SrsConfDirective* get(std::string _name, std::string _arg0);
-    // RAW 
+    // RAW
 public:
     virtual SrsConfDirective* get_or_create(std::string n);
     virtual SrsConfDirective* get_or_create(std::string n, std::string a0);
@@ -256,19 +256,6 @@ private:
     virtual srs_error_t read_token(srs_internal::SrsConfigBuffer* buffer, std::vector<std::string>& args, int& line_start, SrsDirectiveState& state);
 };
 
-// The state for reloading config.
-enum SrsReloadState {
-    SrsReloadStateInit = 0,
-    // Start to parse the new config file.
-    SrsReloadStateParsing = 10,
-    // Start to transform the new config file to new version.
-    SrsReloadStateTransforming = 20,
-    // Start to apply the new config file.
-    SrsReloadStateApplying = 30,
-    // The reload is finished.
-    SrsReloadStateFinished = 90,
-};
-
 // The config service provider.
 // For the config supports reload, so never keep the reference cross st-thread,
 // that is, never save the SrsConfDirective* get by any api of config,
@@ -321,7 +308,7 @@ public:
     virtual void unsubscribe(ISrsReloadHandler* handler);
     // Reload  the config file.
     // @remark, user can test the config before reload it.
-    virtual srs_error_t reload(SrsReloadState *pstate);
+    virtual srs_error_t reload();
 private:
     // Reload  the vhost section of config.
     virtual srs_error_t reload_vhost(SrsConfDirective* old_root);
@@ -412,6 +399,8 @@ public:
     //       user must use "ulimit -HSn 10000" and config the max connections
     //       of SRS.
     virtual int get_max_connections();
+    //Get the maximum that each stream can pull
+    virtual int get_max_playstream();
     // Get the listen port of SRS.
     // user can specifies multiple listen ports,
     // each args of directive is a listen port.
@@ -1130,6 +1119,8 @@ public:
     // The device name configed in args of directive.
     // @return the disk device name to stat. NULL if not configed.
     virtual SrsConfDirective* get_stats_disk_device();
+    // Get pull flow authentication
+    virtual bool get_pull_auth();
 public:
     // Get Prometheus exporter config.
     virtual bool get_exporter_enabled();
@@ -1138,5 +1129,13 @@ public:
     virtual std::string get_exporter_tag();
 };
 
+struct stream_auth
+{
+    std::string stream;
+    std::string stream_md5;
+};
+
+// std::string streamid_md5_to_origin(std::string streamid);
+std::string md5_16_little(std::string streamid);
 #endif
 
