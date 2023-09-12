@@ -158,9 +158,14 @@ SrsMpegtsOverUdp::SrsMpegtsOverUdp()
 {
     context = new SrsTsContext();
     buffer = new SrsSimpleStream();
+#ifdef SRS_H265
+    hevc_ = new SrsRawHEVCStream();
+    vps_sps_pps_sent_ = false;
+    vps_sps_pps_change_ = false;
+#endif
     
     sdk = NULL;
-    
+
     avc = new SrsRawH264Stream();
     aac = new SrsRawAacStream();
     h264_sps_changed = false;
@@ -168,6 +173,7 @@ SrsMpegtsOverUdp::SrsMpegtsOverUdp()
     h264_sps_pps_sent = false;
     queue = new SrsMpegtsQueue();
     pprint = SrsPithyPrint::create_caster();
+
 }
 
 SrsMpegtsOverUdp::~SrsMpegtsOverUdp()
@@ -180,6 +186,9 @@ SrsMpegtsOverUdp::~SrsMpegtsOverUdp()
     srs_freep(aac);
     srs_freep(queue);
     srs_freep(pprint);
+#ifdef SRS_H265
+    srs_freep(hevc_);
+#endif
 }
 
 srs_error_t SrsMpegtsOverUdp::initialize(SrsConfDirective* c)
@@ -331,12 +340,6 @@ srs_error_t SrsMpegtsOverUdp::on_ts_message(SrsTsMessage* msg)
     // 14496-2 video stream number xxxx
     // ((stream_id >> 4) & 0x0f) == SrsTsPESStreamIdVideo
     
-    if (pprint->can_print()) {
-        srs_trace("<- " SRS_CONSTS_LOG_STREAM_CASTER " mpegts: got %s age=%d stream=%s, dts=%" PRId64 ", pts=%" PRId64 ", size=%d, us=%d, cc=%d, sid=%#x(%s-%d)",
-                  (msg->channel->apply == SrsTsPidApplyVideo)? "Video":"Audio", pprint->age(), srs_ts_stream2string(msg->channel->stream).c_str(),
-                  msg->dts, msg->pts, msg->payload->length(), msg->packet->payload_unit_start_indicator, msg->continuity_counter, msg->sid,
-                  msg->is_audio()? "A":msg->is_video()? "V":"N", msg->stream_number());
-    }
     
     // When the audio SID is private stream 1, we use common audio.
     // @see https://github.com/ossrs/srs/issues/740
@@ -351,7 +354,7 @@ srs_error_t SrsMpegtsOverUdp::on_ts_message(SrsTsMessage* msg)
     }
     
     // check supported codec
-    if (msg->channel->stream != SrsTsStreamVideoH264 && msg->channel->stream != SrsTsStreamAudioAAC) {
+    if (msg->channel->stream != SrsTsStreamVideoH264 && msg->channel->stream != SrsTsStreamAudioAAC && msg->channel->stream != SrsTsStreamVideoHEVC) {
         return srs_error_new(ERROR_STREAM_CASTER_TS_CODEC, "ts: unsupported stream codec=%d", msg->channel->stream);
     }
     
@@ -359,6 +362,14 @@ srs_error_t SrsMpegtsOverUdp::on_ts_message(SrsTsMessage* msg)
     SrsBuffer avs(msg->payload->bytes(), msg->payload->length());
     
     // publish audio or video.
+#ifdef SRS_H265
+    if (msg->channel->stream == SrsTsStreamVideoHEVC) {
+        if ((err = on_ts_video_hevc(msg, &avs)) != srs_success) {
+            return srs_error_wrap(err, "ts: consume video");
+        }
+    }
+#endif
+
     if (msg->channel->stream == SrsTsStreamVideoH264) {
         if ((err = on_ts_video(msg, &avs)) != srs_success) {
             return srs_error_wrap(err, "ts: consume video");
@@ -531,7 +542,183 @@ srs_error_t SrsMpegtsOverUdp::write_h264_ipb_frame(char* frame, int frame_size, 
     uint32_t timestamp = dts;
     return rtmp_write_packet(SrsFrameTypeVideo, timestamp, flv, nb_flv);
 }
+#ifdef SRS_H265
+srs_error_t SrsMpegtsOverUdp::on_ts_video_hevc(SrsTsMessage* msg, SrsBuffer* avs)
+{
+    srs_error_t err = srs_success;
 
+    // ts tbn to flv tbn.
+    uint32_t dts = (uint32_t)(msg->dts / 90);
+    uint32_t pts = (uint32_t)(msg->dts / 90);
+
+    // send each frame.
+    while (!avs->empty()) {
+        char* frame = NULL;
+        int frame_size = 0;
+        if ((err = hevc_->annexb_demux(avs, &frame, &frame_size)) != srs_success) {
+            return srs_error_wrap(err, "demux hevc annexb");
+        }
+
+        // 6bits, 7.4.2.2 NAL unit header semantics
+        // ITU-T-H.265-2021.pdf, page 85.
+        // 32: VPS, 33: SPS, 34: PPS ...
+        SrsHevcNaluType nt = SrsHevcNaluTypeParse(frame[0]);
+        if (nt == SrsHevcNaluType_SEI || nt == SrsHevcNaluType_SEI_SUFFIX || nt == SrsHevcNaluType_ACCESS_UNIT_DELIMITER) {
+            continue;
+        }
+
+        // for vps
+        if (hevc_->is_vps(frame, frame_size)) {
+            std::string vps;
+            if ((err = hevc_->vps_demux(frame, frame_size, vps)) != srs_success) {
+                return srs_error_wrap(err, "demux vps");
+            }
+
+            if (h265_vps_ == vps) {
+                continue;
+            }
+
+            vps_sps_pps_change_ = true;
+            h265_vps_ = vps;
+
+            if ((err = write_h265_vps_sps_pps(dts, pts)) != srs_success) {
+                return srs_error_wrap(err, "write vps");
+            }
+            continue;
+        }
+
+        // for sps
+        if (hevc_->is_sps(frame, frame_size)) {
+            std::string sps;
+            if ((err = hevc_->sps_demux(frame, frame_size, sps)) != srs_success) {
+                return srs_error_wrap(err, "demux sps");
+            }
+
+            if (h265_sps_ == sps) {
+                continue;
+            }
+            vps_sps_pps_change_ = true;
+            h265_sps_ = sps;
+
+            if ((err = write_h265_vps_sps_pps(dts, pts)) != srs_success) {
+                return srs_error_wrap(err, "write sps");
+            }
+            continue;
+        }
+
+        // for pps
+        if (hevc_->is_pps(frame, frame_size)) {
+            std::string pps;
+            if ((err = hevc_->pps_demux(frame, frame_size, pps)) != srs_success) {
+                return srs_error_wrap(err, "demux pps");
+            }
+
+            if (h265_pps_ == pps) {
+                continue;
+            }
+            vps_sps_pps_change_ = true;
+            h265_pps_ = pps;
+
+            if ((err = write_h265_vps_sps_pps(dts, pts)) != srs_success) {
+                return srs_error_wrap(err, "write pps");
+            }
+            continue;
+        }
+
+        // ibp frame.
+        // TODO: FIXME: we should group all frames to a rtmp/flv message from one ts message.
+        srs_info("Muxer: demux avc ibp frame size=%d, dts=%d", frame_size, dts);
+        if ((err = write_h265_ipb_frame(frame, frame_size, dts, pts)) != srs_success) {
+            return srs_error_wrap(err, "write frame");
+        }
+    }
+
+    return err;
+}
+
+srs_error_t SrsMpegtsOverUdp::write_h265_vps_sps_pps(uint32_t dts, uint32_t pts)
+{
+    srs_error_t err = srs_success;
+
+    if (!vps_sps_pps_change_) {
+        return err;
+    }
+
+    if (h265_vps_.empty() || h265_sps_.empty() || h265_pps_.empty()) {
+        return err;
+    }
+
+    std::string sh;
+    std::vector<std::string> h265_pps_vec_ = { h265_pps_ };
+
+    if ((err = hevc_->mux_sequence_header(h265_vps_, h265_sps_, h265_pps_vec_, sh)) != srs_success) {
+        return srs_error_wrap(err, "hevc mux sequence header");
+    }
+
+    // h265 packet to flv packet.
+    int8_t frame_type = SrsVideoAvcFrameTypeKeyFrame;
+    int8_t hevc_packet_type = SrsVideoAvcFrameTraitSequenceHeader;
+
+    char* flv = NULL;
+    int nb_flv = 0;
+
+    if ((err = hevc_->mux_avc2flv(sh, frame_type, hevc_packet_type, dts, pts, &flv, &nb_flv)) != srs_success) {
+        return srs_error_wrap(err, "hevc to flv");
+    }
+
+    // the timestamp in rtmp message header is dts.
+    uint32_t timestamp = dts;
+    if ((err = rtmp_write_packet(SrsFrameTypeVideo, timestamp, flv, nb_flv)) != srs_success) {
+        return srs_error_wrap(err, "hevc write packet");
+    }
+
+    // reset vps/sps/pps.
+    vps_sps_pps_change_ = false;
+    vps_sps_pps_sent_ = true;
+
+    return err;
+}
+
+srs_error_t SrsMpegtsOverUdp::write_h265_ipb_frame(char* frame, int frame_size, uint32_t dts, uint32_t pts)
+{
+    srs_error_t err = srs_success;
+
+    // when sps or pps not sent, ignore the packet.
+    if (!vps_sps_pps_sent_) {
+        return srs_error_new(ERROR_H264_DROP_BEFORE_SPS_PPS, "drop for no vps/sps/pps");
+    }
+
+    SrsHevcNaluType nt = SrsHevcNaluTypeParse(frame[0]);
+
+    // F.3.29 intra random access point (IRAP) picture
+    // ITU-T-H.265-2021.pdf, page 462.
+    SrsVideoAvcFrameType frame_type = SrsVideoAvcFrameTypeInterFrame;
+    if (nt >= SrsHevcNaluType_CODED_SLICE_BLA && nt <= SrsHevcNaluType_RESERVED_23) {
+        frame_type = SrsVideoAvcFrameTypeKeyFrame;
+    }
+
+    string ipb;
+    if ((err = hevc_->mux_ipb_frame(frame, frame_size, ipb)) != srs_success) {
+        return srs_error_wrap(err, "hevc mux ipb frame");
+    }
+
+    int8_t hevc_packet_type = SrsVideoAvcFrameTraitNALU;
+    char* flv = NULL;
+    int nb_flv = 0;
+
+    if ((err = hevc_->mux_avc2flv(ipb, frame_type, hevc_packet_type, dts, pts, &flv, &nb_flv)) != srs_success) {
+        return srs_error_wrap(err, "hevc to flv");
+    }
+
+    // the timestamp in rtmp message header is dts.
+    uint32_t timestamp = dts;
+    if ((err = rtmp_write_packet(SrsFrameTypeVideo, timestamp, flv, nb_flv)) != srs_success) {
+        return srs_error_wrap(err, "hevc write packet");
+    }
+
+    return err;
+}
+#endif
 srs_error_t SrsMpegtsOverUdp::on_ts_audio(SrsTsMessage* msg, SrsBuffer* avs)
 {
     srs_error_t err = srs_success;
