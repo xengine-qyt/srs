@@ -374,7 +374,6 @@ srs_error_t SrsSrtFrameBuilder::on_ts_video_avc(SrsTsMessage* msg, SrsBuffer* av
         if (frame == NULL || frame_size == 0) {
             continue;
         }
-        
         // for sps
         if (avc->is_sps(frame, frame_size)) {
             std::string sps;
@@ -424,7 +423,7 @@ srs_error_t SrsSrtFrameBuilder::check_sps_pps_change(SrsTsMessage* msg)
     }
 
     if (sps_.empty() || pps_.empty()) {
-        return srs_error_new(ERROR_SRT_TO_RTMP_EMPTY_SPS_PPS, "sps or pps empty");
+        return srs_error_new(ERROR_SRT_TO_RTMP_EMPTY_SPS_PPS, "sps or pps empty,%d %d", sps_.empty(), pps_.empty());
     }
 
     // sps/pps changed, generate new video sh frame and dispatch it.

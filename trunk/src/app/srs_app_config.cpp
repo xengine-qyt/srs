@@ -2287,7 +2287,7 @@ srs_error_t SrsConfig::check_normal_config()
             && n != "query_latest_version" && n != "first_wait_for_qlv" && n != "threads"
             && n != "circuit_breaker" && n != "is_full" && n != "in_docker" && n != "tencentcloud_cls"
             && n != "exporter"
-            && n != "pull_auth"
+            && n != "pull_auth" && n != "auth_url"
             ) {
             return srs_error_new(ERROR_SYSTEM_CONFIG_INVALID, "illegal directive %s", n.c_str());
         }
@@ -8807,6 +8807,18 @@ bool SrsConfig::get_pull_auth()
     }
 
     return SRS_CONF_PERFER_TRUE(conf->arg0());
+}
+
+std::string SrsConfig::get_pull_auth_url()
+{
+	static string DEFAULT = "http://127.0.0.1:9592/mrs-m/stream/check?streamId=%s";
+
+	SrsConfDirective* conf = root->get("auth_url");
+	if (!conf || conf->arg0().empty()) {
+		return DEFAULT;
+	}
+
+	return conf->arg0();
 }
 
 static std::vector<stream_auth> stream_auth_list;

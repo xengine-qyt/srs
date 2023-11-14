@@ -1134,6 +1134,7 @@ public:
     virtual SrsConfDirective* get_stats_disk_device();
     // Get pull flow authentication
     virtual bool get_pull_auth();
+    virtual std::string get_pull_auth_url();
 public:
     // Get Prometheus exporter config.
     virtual bool get_exporter_enabled();

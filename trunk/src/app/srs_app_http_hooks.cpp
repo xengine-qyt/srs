@@ -676,13 +676,13 @@ srs_error_t Stream_ID_Check(std::string stream_id)
 {
     char cmd[256], infoString[1024];
 	FILE *fp;
-	int ret, send, receive, loss = 0;
+	int ret;
 
     srs_error_t err = srs_success;
 
     // stream_id = streamid_md5_to_origin(stream_id);
-
-	sprintf(cmd, "curl http://127.0.0.1:9592/mrs-m/stream/check?streamId=%s", stream_id.c_str());
+    string m_StrTmp = "curl " + _srs_config->get_pull_auth_url();
+    sprintf(cmd, m_StrTmp.c_str(), stream_id.c_str());
 
 	fp = popen(cmd, "r");
 	if (fp == NULL)
