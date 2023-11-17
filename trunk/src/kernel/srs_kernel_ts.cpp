@@ -259,7 +259,7 @@ srs_error_t SrsTsContext::decode(SrsBuffer* stream, ISrsTsHandler* handler)
     while (!stream->empty()) {
         SrsTsPacket* packet = new SrsTsPacket(this);
         SrsAutoFree(SrsTsPacket, packet);
-        
+
         SrsTsMessage* msg = NULL;
         if ((err = packet->decode(stream, &msg)) != srs_success) {
             return srs_error_wrap(err, "ts: ts packet decode");
@@ -269,7 +269,7 @@ srs_error_t SrsTsContext::decode(SrsBuffer* stream, ISrsTsHandler* handler)
             continue;
         }
         SrsAutoFree(SrsTsMessage, msg);
-        
+
         if ((err = handler->on_ts_message(msg)) != srs_success) {
             return srs_error_wrap(err, "ts: handle ts message");
         }
