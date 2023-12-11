@@ -279,7 +279,7 @@ srs_error_t SrsMpegtsSrtConn::do_cycle()
         return srs_error_new(ERROR_SRT_CONN, "srt disabled, vhost=%s", req_->vhost.c_str());
     }
 
-	if (_srs_config->get_pull_auth() == true) {
+	if (_srs_config->get_pull_auth()) {
 		if (mode == SrtModePush)
 		{
 			if (Stream_ID_Check(req_->stream.c_str()) != srs_success) {

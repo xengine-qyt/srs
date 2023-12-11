@@ -681,6 +681,10 @@ srs_error_t Stream_ID_Check(std::string stream_id)
     srs_error_t err = srs_success;
 
     // stream_id = streamid_md5_to_origin(stream_id);
+    if (_srs_config->get_pull_auth_url().length() <= 0)
+    {
+        return err;
+    }
     string m_StrTmp = "curl " + _srs_config->get_pull_auth_url();
     sprintf(cmd, m_StrTmp.c_str(), stream_id.c_str());
 

@@ -510,7 +510,7 @@ srs_error_t SrsRtmpConn::stream_service_cycle()
     srs_trace("client identified, type=%s, vhost=%s, app=%s, stream=%s, param=%s, duration=%dms",
         srs_client_type_string(info->type).c_str(), req->vhost.c_str(), req->app.c_str(), req->stream.c_str(), req->param.c_str(), srsu2msi(req->duration));
 
-	if (_srs_config->get_pull_auth() == true) {
+	if (_srs_config->get_pull_auth()) {
 		if (SrsRtmpConnFMLEPublish == info->type || SrsRtmpConnFlashPublish == info->type || \
 			SrsRtmpConnHaivisionPublish == info->type || SrsRtcConnPublish == info->type) {
 			if ((err = Stream_ID_Check(req->stream)) != srs_success) {

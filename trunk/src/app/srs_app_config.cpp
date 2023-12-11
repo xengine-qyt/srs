@@ -8811,7 +8811,8 @@ bool SrsConfig::get_pull_auth()
 
 std::string SrsConfig::get_pull_auth_url()
 {
-	static string DEFAULT = "http://127.0.0.1:9592/mrs-m/stream/check?streamId=%s";
+	//static string DEFAULT = "http://127.0.0.1:9592/mrs-m/stream/check?streamId=%s";
+    static string DEFAULT = "";
 
 	SrsConfDirective* conf = root->get("auth_url");
 	if (!conf || conf->arg0().empty()) {
