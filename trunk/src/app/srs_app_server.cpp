@@ -336,8 +336,9 @@ SrsServer::SrsServer()
     http_listener_ = new SrsTcpListener(this);
     https_listener_ = new SrsTcpListener(this);
     webrtc_listener_ = new SrsTcpListener(this);
-    stream_caster_flv_listener_ = new SrsHttpFlvListener();
-    stream_caster_mpegts_ = new SrsUdpCasterListener();
+	stream_caster_flv_listener_ = new SrsHttpFlvListener();
+	//stream_caster_mpegts_ = new SrsUdpCasterListener();
+    stream_caster_mpegts_ = new std::vector<SrsUdpCasterListener*>;
     exporter_listener_ = new SrsTcpListener(this);
 #ifdef SRS_GB28181
     stream_caster_gb28181_ = new SrsGbListener();
@@ -396,6 +397,13 @@ void SrsServer::destroy()
     srs_freep(https_listener_);
     srs_freep(webrtc_listener_);
     srs_freep(stream_caster_flv_listener_);
+    
+	std::vector<SrsUdpCasterListener*>::iterator stl_ListIterator = stream_caster_mpegts_->begin();
+	for (; stl_ListIterator != stream_caster_mpegts_->end(); stl_ListIterator++)
+	{
+        srs_freep((*stl_ListIterator));
+    }
+    stream_caster_mpegts_->clear();
     srs_freep(stream_caster_mpegts_);
     srs_freep(exporter_listener_);
 #ifdef SRS_GB28181
@@ -415,7 +423,12 @@ void SrsServer::dispose()
     https_listener_->close();
     webrtc_listener_->close();
     stream_caster_flv_listener_->close();
-    stream_caster_mpegts_->close();
+    //stream_caster_mpegts_->close();
+    std::vector<SrsUdpCasterListener*>::iterator stl_ListIterator = stream_caster_mpegts_->begin();
+    for (; stl_ListIterator != stream_caster_mpegts_->end(); stl_ListIterator++)
+    {
+        (*stl_ListIterator)->close();
+    }
     exporter_listener_->close();
 #ifdef SRS_GB28181
     stream_caster_gb28181_->close();
@@ -446,7 +459,8 @@ void SrsServer::gracefully_dispose()
     https_listener_->close();
     webrtc_listener_->close();
     stream_caster_flv_listener_->close();
-    stream_caster_mpegts_->close();
+    //stream_caster_mpegts_->close();
+    stream_caster_mpegts_->clear();
     exporter_listener_->close();
 #ifdef SRS_GB28181
     stream_caster_gb28181_->close();
@@ -638,10 +652,12 @@ srs_error_t SrsServer::listen()
         ISrsListener* listener = NULL;
         std::string caster = _srs_config->get_stream_caster_engine(conf);
         if (srs_stream_caster_is_udp(caster)) {
-            listener = stream_caster_mpegts_;
-            if ((err = stream_caster_mpegts_->initialize(conf)) != srs_success) {
-                return srs_error_wrap(err, "initialize");
-            }
+            SrsUdpCasterListener* pClass_UDPListen = new SrsUdpCasterListener;
+			listener = pClass_UDPListen;
+			if ((err = pClass_UDPListen->initialize(conf)) != srs_success) {
+				return srs_error_wrap(err, "initialize");
+			}
+            stream_caster_mpegts_->push_back(pClass_UDPListen);
         } else if (srs_stream_caster_is_flv(caster)) {
             listener = stream_caster_flv_listener_;
             if ((err = stream_caster_flv_listener_->initialize(conf)) != srs_success) {
