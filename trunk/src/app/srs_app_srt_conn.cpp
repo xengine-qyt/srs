@@ -278,19 +278,19 @@ srs_error_t SrsMpegtsSrtConn::do_cycle()
     if (! _srs_config->get_srt_enabled(req_->vhost)) {
         return srs_error_new(ERROR_SRT_CONN, "srt disabled, vhost=%s", req_->vhost.c_str());
     }
-
-	if (_srs_config->get_pull_auth()) {
-		if (mode == SrtModePush)
-		{
-			if (Stream_ID_Check(req_->stream.c_str()) != srs_success) {
-				return srs_error_new(ERROR_SRT_CONN, "srt stream:%s not registered", req_->stream.c_str());
-			}
-			srs_trace("srt stream:%s registered", req_->stream.c_str());
+   
+	if (mode == SrtModePush)
+	{
+		if (_srs_config->get_pull_auth()) {
 			req_->stream = md5_16_little(req_->stream.c_str());
 		}
+		if (Stream_ID_Check(req_->stream.c_str()) != srs_success) {
+			return srs_error_new(ERROR_SRT_CONN, "srt stream:%s not registered", req_->stream.c_str());
+		}
+        srs_trace("srt stream:%s registered", req_->stream.c_str());
 	}
-
-
+	
+	
     srs_trace("@srt, streamid=%s, stream_url=%s, vhost=%s, app=%s, stream=%s, param=%s",
               streamid.c_str(), req_->get_stream_url().c_str(), req_->vhost.c_str(), req_->app.c_str(), req_->stream.c_str(), req_->param.c_str());
 
