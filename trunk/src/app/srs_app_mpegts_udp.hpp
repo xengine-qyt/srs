@@ -65,6 +65,7 @@ public:
     SrsMpegtsQueue();
     virtual ~SrsMpegtsQueue();
 public:
+    virtual srs_error_t clear();
     virtual srs_error_t push(SrsSharedPtrMessage* msg);
     virtual SrsSharedPtrMessage* dequeue();
 };
@@ -81,8 +82,9 @@ private:
 private:
     SrsRawH264Stream* avc;
     std::string h264_sps;
-    bool h264_sps_changed;
     std::string h264_pps;
+
+    bool h264_sps_changed;
     bool h264_pps_changed;
     bool h264_sps_pps_sent;
 #ifdef SRS_H265

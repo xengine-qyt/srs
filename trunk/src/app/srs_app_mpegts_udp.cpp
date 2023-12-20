@@ -87,14 +87,22 @@ SrsMpegtsQueue::SrsMpegtsQueue()
 
 SrsMpegtsQueue::~SrsMpegtsQueue()
 {
-    std::map<int64_t, SrsSharedPtrMessage*>::iterator it;
-    for (it = msgs.begin(); it != msgs.end(); ++it) {
-        SrsSharedPtrMessage* msg = it->second;
-        srs_freep(msg);
-    }
-    msgs.clear();
+    clear();
 }
 
+srs_error_t SrsMpegtsQueue::clear()
+{
+    srs_error_t err = srs_success;
+    nb_audios = nb_videos = 0;
+
+	std::map<int64_t, SrsSharedPtrMessage*>::iterator it;
+	for (it = msgs.begin(); it != msgs.end(); ++it) {
+		SrsSharedPtrMessage* msg = it->second;
+		srs_freep(msg);
+	}
+	msgs.clear();
+    return err;
+}
 srs_error_t SrsMpegtsQueue::push(SrsSharedPtrMessage* msg)
 {
     srs_error_t err = srs_success;
@@ -180,8 +188,9 @@ SrsMpegtsOverUdp::~SrsMpegtsOverUdp()
 {
     close();
     
-    srs_freep(buffer);
     srs_freep(context);
+    srs_freep(buffer);
+    
     srs_freep(avc);
     srs_freep(aac);
     srs_freep(queue);
@@ -210,10 +219,16 @@ srs_error_t SrsMpegtsOverUdp::on_udp_packet(const sockaddr* from, const int from
     std::string peer_ip = std::string(address_string);
     int peer_port = atoi(port_string);
     
+
     // append to buffer.
     buffer->append(buf, nb_buf);
     
     srs_error_t err = on_udp_bytes(peer_ip, peer_port, buf, nb_buf);
+    if (1009 == srs_error_code(err))
+    {
+        close();
+        err = on_udp_bytes(peer_ip, peer_port, buf, nb_buf);
+    }
     if (err != srs_success) {
         return srs_error_wrap(err, "process udp");
     }
@@ -283,6 +298,10 @@ srs_error_t SrsMpegtsOverUdp::on_udp_bytes(string host, int port, char* buf, int
         
         // process each ts packet
         if ((err = context->decode(stream, this)) != srs_success) {
+            if (1009 == srs_error_code(err))
+            {
+                return srs_error_wrap(err, "ts: send message");
+            }
             srs_info("parse ts packet err=%s", srs_error_desc(err).c_str());
             srs_error_reset(err);
             continue;
@@ -817,7 +836,7 @@ srs_error_t SrsMpegtsOverUdp::rtmp_write_packet(char type, uint32_t timestamp, c
         }
         
         // send out encoded msg.
-        if ((err = sdk->send_and_free_message(msg)) != srs_success) {
+		if ((err = sdk->send_and_free_message(msg)) != srs_success) {
             close();
             return srs_error_wrap(err, "send messages");
         }
@@ -829,12 +848,11 @@ srs_error_t SrsMpegtsOverUdp::rtmp_write_packet(char type, uint32_t timestamp, c
 srs_error_t SrsMpegtsOverUdp::connect()
 {
     srs_error_t err = srs_success;
-    
+
     // Ignore when connected.
     if (sdk) {
         return err;
     }
-    
     srs_utime_t cto = SRS_CONSTS_RTMP_TIMEOUT;
     srs_utime_t sto = SRS_CONSTS_RTMP_PULSE;
     sdk = new SrsSimpleRtmpClient(output, cto, sto);
@@ -854,6 +872,28 @@ srs_error_t SrsMpegtsOverUdp::connect()
 
 void SrsMpegtsOverUdp::close()
 {
+    srs_freep(context);
+    srs_freep(buffer);
+    srs_freep(avc);
+    srs_freep(aac);
+    srs_freep(queue);
     srs_freep(sdk);
-}
+#ifdef SRS_H265
+    srs_freep(hevc_);
+    
+    h265_vps_.clear();
+    h265_sps_.clear();
+    h265_pps_.clear();
+    hevc_ = new SrsRawHEVCStream();
+#endif
 
+	context = new SrsTsContext();
+    buffer = new SrsSimpleStream();
+    avc = new SrsRawH264Stream();
+    aac = new SrsRawAacStream();
+    queue = new SrsMpegtsQueue();
+    connect();
+
+    h264_sps.clear();
+    h264_pps.clear();
+}
