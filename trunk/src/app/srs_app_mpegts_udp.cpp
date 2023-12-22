@@ -749,7 +749,8 @@ srs_error_t SrsMpegtsOverUdp::on_ts_audio(SrsTsMessage* msg, SrsBuffer* avs)
     
     // ts tbn to flv tbn.
     uint32_t dts = (uint32_t)(msg->dts / 90);
-    
+	int frame_idx = 0;
+	int duration_ms = 0;
     // send each frame.
     while (!avs->empty()) {
         char* frame = NULL;
@@ -767,25 +768,37 @@ srs_error_t SrsMpegtsOverUdp::on_ts_audio(SrsTsMessage* msg, SrsBuffer* avs)
         srs_info("mpegts: demux aac frame size=%d, dts=%d", frame_size, dts);
         
         // generate sh.
+        std::string sh;
         if (aac_specific_config.empty()) {
-            std::string sh;
             if ((err = aac->mux_sequence_header(&codec, sh)) != srs_success) {
                 return srs_error_wrap(err, "mux sequence header");
             }
             aac_specific_config = sh;
-            
             codec.aac_packet_type = 0;
-            
-            if ((err = write_audio_raw_frame((char*)sh.data(), (int)sh.length(), &codec, dts)) != srs_success) {
-                return srs_error_wrap(err, "write raw audio frame");
-            }
         }
-        
-        // audio raw data.
-        codec.aac_packet_type = 1;
-        if ((err = write_audio_raw_frame(frame, frame_size, &codec, dts)) != srs_success) {
-            return srs_error_wrap(err, "write audio raw frame");
+        else
+        {
+			// audio raw data.
+			codec.aac_packet_type = 1;
+
+            sh.resize(frame_size);
+            std::copy(frame, frame + frame_size, sh.begin());
         }
+		int sample_rate = 44100;
+		switch (codec.sound_rate) {
+		case SrsAudioSampleRate5512: sample_rate = 5512; break;
+		case SrsAudioSampleRate11025: sample_rate = 11025; break;
+		case SrsAudioSampleRate22050: sample_rate = 22050; break;
+		case SrsAudioSampleRate44100:
+		default: sample_rate = 44100; break;
+		}
+		uint32_t frame_pts = (double)dts + (frame_idx * (1024.0 * 1000.0 / sample_rate));
+		duration_ms += 1024.0 * 1000.0 / sample_rate;
+		++frame_idx;
+
+		if ((err = write_audio_raw_frame((char*)sh.data(), (int)sh.length(), &codec, frame_pts)) != srs_success) {
+			return srs_error_wrap(err, "write raw audio frame");
+		}
     }
     
     return err;
