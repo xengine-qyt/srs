@@ -358,7 +358,6 @@ srs_error_t SrsSrtFrameBuilder::on_ts_message(SrsTsMessage* msg)
     
     // parse the stream.
     SrsBuffer avs(msg->payload->bytes(), msg->payload->length());
-    
     // publish audio or video.
     if (msg->channel->stream == SrsTsStreamVideoH264) {
         if ((err = on_ts_video_avc(msg, &avs)) != srs_success) {
@@ -388,9 +387,7 @@ srs_error_t SrsSrtFrameBuilder::on_ts_video_avc(SrsTsMessage* msg, SrsBuffer* av
     srs_error_t err = srs_success;
 
     vector<pair<char*, int> > ipb_frames;
-
     SrsUniquePtr<SrsRawH264Stream> avc(new SrsRawH264Stream());
-
     // send each frame.
     while (!avs->empty()) {
         char* frame = NULL;
@@ -401,8 +398,7 @@ srs_error_t SrsSrtFrameBuilder::on_ts_video_avc(SrsTsMessage* msg, SrsBuffer* av
 
         if (frame == NULL || frame_size == 0) {
             continue;
-        }
-        
+		}
         // for sps
         if (avc->is_sps(frame, frame_size)) {
             std::string sps;
@@ -452,7 +448,8 @@ srs_error_t SrsSrtFrameBuilder::check_sps_pps_change(SrsTsMessage* msg)
     }
 
     if (sps_.empty() || pps_.empty()) {
-        return srs_error_new(ERROR_SRT_TO_RTMP_EMPTY_SPS_PPS, "sps or pps empty");
+        //return srs_error_new(ERROR_SRT_TO_RTMP_EMPTY_SPS_PPS, "sps or pps empty,%d %d", sps_.empty(), pps_.empty());
+        return err;
     }
 
     // sps/pps changed, generate new video sh frame and dispatch it.
@@ -499,7 +496,8 @@ srs_error_t SrsSrtFrameBuilder::on_h264_frame(SrsTsMessage* msg, vector<pair<cha
     srs_error_t err = srs_success;
 
     if (ipb_frames.empty()) {
-        return srs_error_new(ERROR_SRT_CONN, "empty frame");
+        //return srs_error_new(ERROR_SRT_CONN, "empty frame");
+        return err;
     }
 
     bool is_keyframe = false;

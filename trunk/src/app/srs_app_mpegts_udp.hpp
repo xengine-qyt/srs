@@ -21,6 +21,9 @@ class SrsRtmpClient;
 class SrsStSocket;
 class SrsRequest;
 class SrsRawH264Stream;
+#ifdef SRS_H265
+class SrsRawHEVCStream;
+#endif
 class SrsSharedPtrMessage;
 class SrsRawAacStream;
 struct SrsRawAacStreamCodec;
@@ -31,6 +34,7 @@ class SrsMpegtsOverUdp;
 #include <srs_app_st.hpp>
 #include <srs_kernel_ts.hpp>
 #include <srs_app_listener.hpp>
+#include <srs_app_stream_bridge.hpp>
 
 // A UDP listener, for udp stream caster server.
 class SrsUdpCasterListener : public ISrsListener
@@ -61,6 +65,7 @@ public:
     SrsMpegtsQueue();
     virtual ~SrsMpegtsQueue();
 public:
+    virtual srs_error_t clear();
     virtual srs_error_t push(SrsSharedPtrMessage* msg);
     virtual SrsSharedPtrMessage* dequeue();
 };
@@ -77,10 +82,19 @@ private:
 private:
     SrsRawH264Stream* avc;
     std::string h264_sps;
-    bool h264_sps_changed;
     std::string h264_pps;
+
+    bool h264_sps_changed;
     bool h264_pps_changed;
     bool h264_sps_pps_sent;
+#ifdef SRS_H265
+    SrsRawHEVCStream* hevc_;
+    bool vps_sps_pps_change_;
+    std::string h265_vps_;
+    std::string h265_sps_;
+    std::string h265_pps_;
+    bool vps_sps_pps_sent_;
+#endif
 private:
     SrsRawAacStream* aac;
     std::string aac_specific_config;
@@ -106,6 +120,11 @@ private:
     virtual srs_error_t write_h264_ipb_frame(char* frame, int frame_size, uint32_t dts, uint32_t pts);
     virtual srs_error_t on_ts_audio(SrsTsMessage* msg, SrsBuffer* avs);
     virtual srs_error_t write_audio_raw_frame(char* frame, int frame_size, SrsRawAacStreamCodec* codec, uint32_t dts);
+#ifdef SRS_H265
+    virtual srs_error_t on_ts_video_hevc(SrsTsMessage* msg, SrsBuffer* avs);
+    virtual srs_error_t write_h265_vps_sps_pps(uint32_t dts, uint32_t pts);
+    virtual srs_error_t write_h265_ipb_frame(char* frame, int frame_size, uint32_t dts, uint32_t pts);
+#endif
 private:
     virtual srs_error_t rtmp_write_packet(char type, uint32_t timestamp, char* data, int size);
 private:

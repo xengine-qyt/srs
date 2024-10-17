@@ -415,6 +415,8 @@ public:
     //       user must use "ulimit -HSn 10000" and config the max connections
     //       of SRS.
     virtual int get_max_connections();
+    //Get the maximum that each stream can pull
+    virtual int get_max_playstreams();
     // Get the listen port of SRS.
     // user can specifies multiple listen ports,
     // each args of directive is a listen port.
@@ -1134,6 +1136,9 @@ public:
     // The device name configed in args of directive.
     // @return the disk device name to stat. NULL if not configed.
     virtual SrsConfDirective* get_stats_disk_device();
+    // Get pull flow authentication
+    virtual bool get_pull_auth();
+    virtual std::string get_pull_auth_url();
 public:
     // Get Prometheus exporter config.
     virtual bool get_exporter_enabled();
@@ -1142,5 +1147,13 @@ public:
     virtual std::string get_exporter_tag();
 };
 
+struct stream_auth
+{
+    std::string stream;
+    std::string stream_md5;
+};
+
+// std::string streamid_md5_to_origin(std::string streamid);
+std::string md5_16_little(std::string streamid);
 #endif
 

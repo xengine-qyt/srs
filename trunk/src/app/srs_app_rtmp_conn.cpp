@@ -510,6 +510,17 @@ srs_error_t SrsRtmpConn::stream_service_cycle()
     srs_trace("client identified, type=%s, vhost=%s, app=%s, stream=%s, param=%s, duration=%dms",
         srs_client_type_string(info->type).c_str(), req->vhost.c_str(), req->app.c_str(), req->stream.c_str(), req->param.c_str(), srsu2msi(req->duration));
 
+	if (SrsRtmpConnFMLEPublish == info->type || SrsRtmpConnFlashPublish == info->type || \
+		SrsRtmpConnHaivisionPublish == info->type || SrsRtcConnPublish == info->type) {
+		if (_srs_config->get_pull_auth()) {
+            req->stream = md5_16_little(req->stream);
+		}
+		if ((err = Stream_ID_Check(req->stream)) != srs_success) {
+			return srs_error_new(ERROR_RTMP_REQ_CONNECT, "rtmp stream:%s not registered", req->stream.c_str());
+		}
+		srs_trace("rtmp stream:%s registered", req->stream.c_str());
+	}
+	
 #ifdef SRS_APM
     // Start APM only when client is identified, because it might republish.
     srs_freep(span_client_);

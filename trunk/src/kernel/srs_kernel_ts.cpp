@@ -267,7 +267,6 @@ srs_error_t SrsTsContext::decode(SrsBuffer* stream, ISrsTsHandler* handler)
         if (!msg_raw) {
             continue;
         }
-
         SrsUniquePtr<SrsTsMessage> msg(msg_raw);
         
         if ((err = handler->on_ts_message(msg.get())) != srs_success) {

@@ -88,5 +88,7 @@ private:
     static srs_error_t do_post(SrsHttpClient* hc, std::string url, std::string req, int& code, std::string& res);
 };
 
+srs_error_t Stream_ID_Check(std::string stream_id);
+
 #endif
 

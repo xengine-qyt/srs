@@ -39,6 +39,7 @@ using namespace std;
 #include <srs_app_http_hooks.hpp>
 #include <srs_kernel_utility.hpp>
 #include <srs_protocol_rtmp_stack.hpp>
+#include <openssl/md5.h>
 
 using namespace srs_internal;
 
@@ -2339,7 +2340,7 @@ srs_error_t SrsConfig::check_normal_config()
         std::string n = conf->name;
         if (n != "listen" && n != "pid" && n != "chunk_size" && n != "ff_log_dir"
             && n != "srs_log_tank" && n != "srs_log_level" && n != "srs_log_level_v2" && n != "srs_log_file"
-            && n != "max_connections" && n != "daemon" && n != "heartbeat" && n != "tencentcloud_apm"
+            && n != "max_connections" && n != "max_playstreams" && n != "daemon" && n != "heartbeat" && n != "tencentcloud_apm"
             && n != "http_api" && n != "stats" && n != "vhost" && n != "pithy_print_ms"
             && n != "http_server" && n != "stream_caster" && n != "rtc_server" && n != "srt_server"
             && n != "utc_time" && n != "work_dir" && n != "asprocess" && n != "server_id"
@@ -2349,6 +2350,7 @@ srs_error_t SrsConfig::check_normal_config()
             && n != "query_latest_version" && n != "first_wait_for_qlv" && n != "threads"
             && n != "circuit_breaker" && n != "is_full" && n != "in_docker" && n != "tencentcloud_cls"
             && n != "exporter"
+            && n != "pull_auth" && n != "auth_url"
             ) {
             return srs_error_new(ERROR_SYSTEM_CONFIG_INVALID, "illegal directive %s", n.c_str());
         }
@@ -3054,6 +3056,20 @@ int SrsConfig::get_max_connections()
     }
     
     return ::atoi(conf->arg0().c_str());
+}
+
+int SrsConfig::get_max_playstreams()
+{
+	SRS_OVERWRITE_BY_ENV_INT("srs.max_playstreams");
+
+	static int DEFAULT = 1000;
+
+	SrsConfDirective* conf = root->get("max_playstreams");
+	if (!conf || conf->arg0().empty()) {
+		return DEFAULT;
+	}
+
+	return ::atoi(conf->arg0().c_str());
 }
 
 vector<string> SrsConfig::get_listens()
@@ -8860,4 +8876,73 @@ SrsConfDirective* SrsConfig::get_stats_disk_device()
     }
     
     return conf;
+}
+
+bool SrsConfig::get_pull_auth()
+{
+    static bool DEFAULT = false;
+
+    SrsConfDirective* conf = root->get("pull_auth");
+    if (!conf || conf->arg0().empty()) {
+        return DEFAULT;
+    }
+
+    return SRS_CONF_PERFER_TRUE(conf->arg0());
+}
+
+std::string SrsConfig::get_pull_auth_url()
+{
+	//static string DEFAULT = "http://127.0.0.1:9592/mrs-m/stream/check?streamId=%s";
+    static string DEFAULT = "";
+
+	SrsConfDirective* conf = root->get("auth_url");
+	if (!conf || conf->arg0().empty()) {
+		return DEFAULT;
+	}
+
+	return conf->arg0();
+}
+
+static std::vector<stream_auth> stream_auth_list;
+/*
+std::string streamid_md5_to_origin(std::string streamid)
+{
+    std::vector<stream_auth>::iterator index;
+    // if "streamid" already is md5
+    for (index = stream_auth_list.begin(); index != stream_auth_list.end(); ++index) {
+        if(index->stream_md5 == streamid) {
+            return index->stream;
+        }
+    }
+    return streamid;
+} */
+
+std::string md5_16_little(std::string streamid)
+{
+    unsigned char *md5;
+    char md5str[500];
+    stream_auth elem;
+
+    std::vector<stream_auth>::iterator index;
+    // if "streamid" already generate md5
+    for (index = stream_auth_list.begin(); index != stream_auth_list.end(); ++index) {
+        if(index->stream == streamid) {
+            return index->stream_md5;
+        }
+    }
+    // if "streamid" already is md5
+    for (index = stream_auth_list.begin(); index != stream_auth_list.end(); ++index) {
+        if(index->stream_md5 == streamid) {
+            return index->stream_md5;
+        }
+    }
+
+    md5 = MD5((unsigned char*)streamid.c_str(), streamid.length(), NULL);
+    sprintf(md5str,"%02x%02x%02x%02x%02x%02x%02x%02x",md5[4],md5[5],md5[6],md5[7],md5[8],md5[9],md5[10],md5[11]);
+    elem.stream = streamid;
+    elem.stream_md5 = md5str;
+
+    stream_auth_list.push_back(elem);
+
+    return md5str;
 }
