@@ -398,6 +398,7 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
     //      sequenceParameterSetNALUnit
 
     // use simple mode: nalu size + nalu data
+
     int pps_size = 0;
     for (std::vector<std::string>::iterator it = pps.begin(); it != pps.end(); it++) {
         pps_size += 2 + it->length();
