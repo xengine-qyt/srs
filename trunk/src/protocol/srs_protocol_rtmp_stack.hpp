@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #ifndef SRS_PROTOCOL_RTMP_HPP
@@ -114,8 +114,8 @@ public:
 // Encode functions for concrete packet to override.
 public:
     // The cid(chunk id) specifies the chunk to send data over.
-    // Generally, each message perfer some cid, for example,
-    // all protocol control messages perfer RTMP_CID_ProtocolControl,
+    // Generally, each message prefer some cid, for example,
+    // all protocol control messages prefer RTMP_CID_ProtocolControl,
     // SrsSetWindowAckSizePacket is protocol control message.
     virtual int get_prefer_cid();
     // The subpacket must override to provide the right message type.
@@ -424,6 +424,10 @@ public:
     std::string param;
     // The stream in play/publish
     std::string stream;
+    // User specify the ice-ufrag, the username of ice, for test only.
+    std::string ice_ufrag_;
+    // User specify the ice-pwd, the password of ice, for test only.
+    std::string ice_pwd_;
     // For play live stream,
     // used to specified the stop when exceed the duration.
     // in srs_utime_t.
@@ -743,6 +747,10 @@ public:
     // When client type is publish, response with packets:
     // onStatus(NetStream.Publish.Start)
     virtual srs_error_t start_flash_publish(int stream_id);
+    // Response the start publishing message after hooks verified. To stop reconnecting of
+    // OBS when publish failed, we should never send the onStatus(NetStream.Publish.Start)
+    // message before failure caused by hooks. See https://github.com/ossrs/srs/issues/4037
+    virtual srs_error_t start_publishing(int stream_id);
 public:
     // Expect a specified message, drop others util got specified one.
     // @pmsg, user must free it. NULL if not success.

@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 Winlin
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 #include <srs_utest_srt.hpp>
 
@@ -195,8 +195,7 @@ VOID TEST(ServiceStSRTTest, ListenConnectAccept)
     srs_srt_t srt_client_fd = srs_srt_socket_invalid();
     HELPER_EXPECT_SUCCESS(srs_srt_socket(&srt_client_fd));
 
-    SrsSrtSocket* srt_client_socket = new SrsSrtSocket(_srt_eventloop->poller(), srt_client_fd);
-    SrsAutoFree(SrsSrtSocket, srt_client_socket);
+    SrsUniquePtr<SrsSrtSocket> srt_client_socket(new SrsSrtSocket(_srt_eventloop->poller(), srt_client_fd));
 
     // No client connected, accept will timeout.
     srs_srt_t srt_fd = srs_srt_socket_invalid();

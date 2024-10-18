@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #ifndef SRS_APP_HLS_HPP
@@ -204,6 +204,10 @@ public:
     virtual bool pure_audio();
     virtual srs_error_t flush_audio(SrsTsMessageCache* cache);
     virtual srs_error_t flush_video(SrsTsMessageCache* cache);
+    // When flushing video or audio, we update the duration. But, we should also update the
+    // duration before closing the segment. Keep in mind that it's fine to update the duration
+    // several times using the same dts timestamp.
+    void update_duration(uint64_t dts);
     // Close segment(ts).
     virtual srs_error_t segment_close();
 private:
@@ -309,6 +313,7 @@ private:
 public:
     virtual void dispose();
     virtual srs_error_t cycle();
+    srs_utime_t cleanup_delay();
 public:
     // Initialize the hls by handler and source.
     virtual srs_error_t initialize(SrsOriginHub* h, SrsRequest* r);

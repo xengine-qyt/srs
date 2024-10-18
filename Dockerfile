@@ -11,7 +11,7 @@ ARG SRS_AUTO_PACKAGER
 RUN echo "BUILDPLATFORM: $BUILDPLATFORM, TARGETPLATFORM: $TARGETPLATFORM, PACKAGER: ${#SRS_AUTO_PACKAGER}, CONFARGS: ${CONFARGS}, MAKEARGS: ${MAKEARGS}, INSTALLDEPENDS: ${INSTALLDEPENDS}"
 
 # https://serverfault.com/questions/949991/how-to-install-tzdata-on-a-ubuntu-docker-image
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # To use if in RUN, see https://github.com/moby/moby/issues/7281#issuecomment-389440503
 # Note that only exists issue like "/bin/sh: 1: [[: not found" for Ubuntu20, no such problem in CentOS7.
@@ -29,7 +29,7 @@ WORKDIR /srs/trunk
 # Build and install SRS.
 # Note that SRT is enabled by default, so we configure without --srt=on.
 # Note that we have copied all files by make install.
-RUN ./configure --gb28181=on --h265=on ${CONFARGS} && make ${MAKEARGS} && make install
+RUN ./configure ${CONFARGS} && make ${MAKEARGS} && make install
 
 ############################################################
 # dist
@@ -56,6 +56,6 @@ RUN ldd /usr/local/srs/objs/ffmpeg/bin/ffmpeg && \
 
 # Default workdir and command.
 WORKDIR /usr/local/srs
-ENV SRS_DAEMON=off
-CMD ["./objs/srs", "-c", "conf/srs.conf"]
+ENV SRS_DAEMON=off SRS_IN_DOCKER=on
+CMD ["./objs/srs", "-c", "conf/docker.conf"]
 

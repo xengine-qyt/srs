@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 #include <srs_utest_kernel2.hpp>
 
@@ -426,7 +426,8 @@ VOID TEST(KernelRTMPExtTest, ExtRTMPTest)
         EXPECT_EQ(SrsVideoAvcFrameTraitNALU, f.video->avc_packet_type);
         EXPECT_EQ(0x12, f.video->cts);
     }
-
+    
+#ifdef SRS_H265
     // For new RTMP enhanced specification, with ext tag header.
     if (true) {
         SrsFormat f;
@@ -480,6 +481,7 @@ VOID TEST(KernelRTMPExtTest, ExtRTMPTest)
         HELPER_ASSERT_SUCCESS(f.initialize());
         HELPER_EXPECT_FAILED(f.on_video(0, (char*) "\x93mvc1", 5));
     }
+#endif
 }
 
 VOID TEST(KernelCodecTest, VideoFormatSepcialMProtect_DJI_M30)
@@ -735,4 +737,10 @@ VOID TEST(KernelCodecTest, VideoFormatRbspNormal)
         ASSERT_EQ(nb_rbsp, (int)expect.size());
         EXPECT_TRUE(srs_bytes_equals(rbsp.data(), expect.data(), nb_rbsp));
     }
+}
+
+VOID TEST(KernelCodecTest, HEVCDuplicatedCode)
+{
+    EXPECT_NE(ERROR_HEVC_NALU_UEV, ERROR_STREAM_CASTER_HEVC_VPS);
+    EXPECT_NE(ERROR_HEVC_NALU_SEV, ERROR_STREAM_CASTER_HEVC_SPS);
 }

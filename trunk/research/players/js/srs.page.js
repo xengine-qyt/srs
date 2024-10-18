@@ -13,7 +13,6 @@ function srs_get_player_height() { return srs_get_player_width() * 9 / 19; }
 * update the navigator, add same query string.
 */
 function update_nav() {
-    $("#srs_index").attr("href", "index.html" + window.location.search);
     $("#nav_srs_player").attr("href", "srs_player.html" + window.location.search);
     $("#nav_rtc_player").attr("href", "rtc_player.html" + window.location.search);
     $("#nav_rtc_publisher").attr("href", "rtc_publisher.html" + window.location.search);
@@ -179,5 +178,5 @@ function srs_init_whip(id, query) {
 }
 function srs_init_whep(id, query) {
     update_nav();
-    $(id).val(build_default_whip_whep_url(query, '/rtc/v1/whip-play/'));
+    $(id).val(build_default_whip_whep_url(query, '/rtc/v1/whep/'));
 }

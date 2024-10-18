@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #include <srs_app_hls.hpp>
@@ -542,9 +542,12 @@ bool SrsHlsMuxer::is_segment_overflow()
         return false;
     }
     
-    // use N% deviation, to smoother.
+    // Use N% deviation, to smoother.
     srs_utime_t deviation = hls_ts_floor? SRS_HLS_FLOOR_REAP_PERCENT * deviation_ts * hls_fragment : 0;
-    return current->duration() >= hls_fragment + deviation;
+
+    // Keep in mind that we use max_td for the base duration, not the hls_fragment. To calculate
+    // max_td, multiply hls_fragment by hls_td_ratio.
+    return current->duration() >= max_td + deviation;
 }
 
 bool SrsHlsMuxer::wait_keyframe()
@@ -586,8 +589,8 @@ srs_error_t SrsHlsMuxer::flush_audio(SrsTsMessageCache* cache)
     }
     
     // update the duration of segment.
-    current->append(cache->audio->pts / 90);
-    
+    update_duration(cache->audio->dts);
+
     if ((err = current->tscw->write_audio(cache->audio)) != srs_success) {
         return srs_error_wrap(err, "hls: write audio");
     }
@@ -615,7 +618,7 @@ srs_error_t SrsHlsMuxer::flush_video(SrsTsMessageCache* cache)
     srs_assert(current);
     
     // update the duration of segment.
-    current->append(cache->video->dts / 90);
+    update_duration(cache->video->dts);
 
     if ((err = current->tscw->write_video(cache->video)) != srs_success) {
         return srs_error_wrap(err, "hls: write video");
@@ -625,6 +628,11 @@ srs_error_t SrsHlsMuxer::flush_video(SrsTsMessageCache* cache)
     srs_freep(cache->video);
     
     return err;
+}
+
+void SrsHlsMuxer::update_duration(uint64_t dts)
+{
+    current->append(dts / 90);
 }
 
 srs_error_t SrsHlsMuxer::segment_close()
@@ -657,9 +665,9 @@ srs_error_t SrsHlsMuxer::do_segment_close()
     // valid, add to segments if segment duration is ok
     // when too small, it maybe not enough data to play.
     // when too large, it maybe timestamp corrupt.
-    // make the segment more acceptable, when in [min, max_td * 2], it's ok.
+    // make the segment more acceptable, when in [min, max_td * 3], it's ok.
     bool matchMinDuration = current->duration() >= SRS_HLS_SEGMENT_MIN_DURATION;
-    bool matchMaxDuration = current->duration() <= max_td * 2 * 1000;
+    bool matchMaxDuration = current->duration() <= max_td * 3 * 1000;
     if (matchMinDuration && matchMaxDuration) {
         // rename from tmp to real path
         if ((err = current->rename()) != srs_success) {
@@ -920,8 +928,9 @@ srs_error_t SrsHlsController::on_publish(SrsRequest* req)
     std::string vhost = req->vhost;
     std::string stream = req->stream;
     std::string app = req->app;
-    
+
     srs_utime_t hls_fragment = _srs_config->get_hls_fragment(vhost);
+    double hls_td_ratio = _srs_config->get_hls_td_ratio(vhost);
     srs_utime_t hls_window = _srs_config->get_hls_window(vhost);
     
     // get the hls m3u8 ts list entry prefix config
@@ -965,9 +974,9 @@ srs_error_t SrsHlsController::on_publish(SrsRequest* req)
     // This config item is used in SrsHls, we just log its value here.
     bool hls_dts_directly = _srs_config->get_vhost_hls_dts_directly(req->vhost);
 
-    srs_trace("hls: win=%dms, frag=%dms, prefix=%s, path=%s, m3u8=%s, ts=%s, aof=%.2f, floor=%d, clean=%d, waitk=%d, dispose=%dms, dts_directly=%d",
+    srs_trace("hls: win=%dms, frag=%dms, prefix=%s, path=%s, m3u8=%s, ts=%s, tdr=%.2f, aof=%.2f, floor=%d, clean=%d, waitk=%d, dispose=%dms, dts_directly=%d",
         srsu2msi(hls_window), srsu2msi(hls_fragment), entry_prefix.c_str(), path.c_str(), m3u8_file.c_str(), ts_file.c_str(),
-        hls_aof_ratio, ts_floor, cleanup, wait_keyframe, srsu2msi(hls_dispose), hls_dts_directly);
+        hls_td_ratio, hls_aof_ratio, ts_floor, cleanup, wait_keyframe, srsu2msi(hls_dispose), hls_dts_directly);
     
     return err;
 }
@@ -1017,6 +1026,10 @@ srs_error_t SrsHlsController::write_audio(SrsAudioFrame* frame, int64_t pts)
     if ((err = tsmc->cache_audio(frame, pts)) != srs_success) {
         return srs_error_wrap(err, "hls: cache audio");
     }
+
+    // First, update the duration of the segment, as we might reap the segment. The duration should
+    // cover from the first frame to the last frame.
+    muxer->update_duration(tsmc->audio->dts);
     
     // reap when current source is pure audio.
     // it maybe changed when stream info changed,
@@ -1064,6 +1077,10 @@ srs_error_t SrsHlsController::write_video(SrsVideoFrame* frame, int64_t dts)
     if ((err = tsmc->cache_video(frame, dts)) != srs_success) {
         return srs_error_wrap(err, "hls: cache video");
     }
+
+    // First, update the duration of the segment, as we might reap the segment. The duration should
+    // cover from the first frame to the last frame.
+    muxer->update_duration(tsmc->video->dts);
     
     // when segment overflow, reap if possible.
     if (muxer->is_segment_overflow()) {
@@ -1220,6 +1237,10 @@ srs_error_t SrsHls::cycle()
 {
     srs_error_t err = srs_success;
 
+    if (!enabled) {
+        return err;
+    }
+
     if (last_update_time <= 0) {
         last_update_time = srs_get_system_time();
     }
@@ -1253,6 +1274,16 @@ srs_error_t SrsHls::cycle()
     dispose();
     
     return err;
+}
+
+srs_utime_t SrsHls::cleanup_delay()
+{
+    if (!enabled) {
+        return 0;
+    }
+
+    // We use larger timeout to cleanup the HLS, after disposed it if required.
+    return _srs_config->get_hls_dispose(req->vhost) * 1.1;
 }
 
 srs_error_t SrsHls::initialize(SrsOriginHub* h, SrsRequest* r)
@@ -1342,10 +1373,9 @@ srs_error_t SrsHls::on_audio(SrsSharedPtrMessage* shared_audio, SrsFormat* forma
     
     // update the hls time, for hls_dispose.
     last_update_time = srs_get_system_time();
-    
-    SrsSharedPtrMessage* audio = shared_audio->copy();
-    SrsAutoFree(SrsSharedPtrMessage, audio);
-    
+
+    SrsUniquePtr<SrsSharedPtrMessage> audio(shared_audio->copy());
+
     // ts support audio codec: aac/mp3
     SrsAudioCodecId acodec = format->acodec->id;
     if (acodec != SrsAudioCodecIdAAC && acodec != SrsAudioCodecIdMP3) {
@@ -1359,7 +1389,7 @@ srs_error_t SrsHls::on_audio(SrsSharedPtrMessage* shared_audio, SrsFormat* forma
     }
     
     // TODO: FIXME: config the jitter of HLS.
-    if ((err = jitter->correct(audio, SrsRtmpJitterAlgorithmOFF)) != srs_success) {
+    if ((err = jitter->correct(audio.get(), SrsRtmpJitterAlgorithmOFF)) != srs_success) {
         return srs_error_wrap(err, "hls: jitter");
     }
     
@@ -1424,10 +1454,9 @@ srs_error_t SrsHls::on_video(SrsSharedPtrMessage* shared_video, SrsFormat* forma
 
     // update the hls time, for hls_dispose.
     last_update_time = srs_get_system_time();
-    
-    SrsSharedPtrMessage* video = shared_video->copy();
-    SrsAutoFree(SrsSharedPtrMessage, video);
-    
+
+    SrsUniquePtr<SrsSharedPtrMessage> video(shared_video->copy());
+
     // ignore info frame,
     // @see https://github.com/ossrs/srs/issues/288#issuecomment-69863909
     srs_assert(format->video);
@@ -1446,7 +1475,7 @@ srs_error_t SrsHls::on_video(SrsSharedPtrMessage* shared_video, SrsFormat* forma
     }
     
     // TODO: FIXME: config the jitter of HLS.
-    if ((err = jitter->correct(video, SrsRtmpJitterAlgorithmOFF)) != srs_success) {
+    if ((err = jitter->correct(video.get(), SrsRtmpJitterAlgorithmOFF)) != srs_success) {
         return srs_error_wrap(err, "hls: jitter");
     }
     

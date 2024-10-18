@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #include <srs_protocol_raw_avc.hpp>
@@ -125,11 +125,10 @@ srs_error_t SrsRawH264Stream::mux_sequence_header(string sps, string pps, string
     // Nbytes of pps:
     //      pictureParameterSetNALUnit
     int nb_packet = 5 + (3 + (int)sps.length()) + (3 + (int)pps.length());
-    char* packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
-    
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
+
     // use stream to generate the h264 packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
     
     // decode the SPS:
     // @see: 7.3.2.1.1, ISO_IEC_14496-10-AVC-2012.pdf, page 62
@@ -186,7 +185,7 @@ srs_error_t SrsRawH264Stream::mux_sequence_header(string sps, string pps, string
     // 5.3.4.2.1 Syntax, ISO_IEC_14496-15-AVC-format-2012.pdf, page 16
     // profile_idc == 100 || profile_idc == 110 || profile_idc == 122 || profile_idc == 144
 
-    sh = string(packet, nb_packet);
+    sh = string(packet.get(), nb_packet);
     
     return err;
 }
@@ -200,11 +199,10 @@ srs_error_t SrsRawH264Stream::mux_ipb_frame(char* frame, int nb_frame, string& i
     // Nbytes of nalu.
     //      NALUnit
     int nb_packet = 4 + nb_frame;
-    char* packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
-    
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
+
     // use stream to generate the h264 packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
     
     // 5.3.4.2.1 Syntax, ISO_IEC_14496-15-AVC-format-2012.pdf, page 16
     // lengthSizeMinusOne, or NAL_unit_length, always use 4bytes size
@@ -217,7 +215,7 @@ srs_error_t SrsRawH264Stream::mux_ipb_frame(char* frame, int nb_frame, string& i
     // NALUnit
     stream.write_bytes(frame, nb_frame);
 
-    ibp = string(packet, nb_packet);
+    ibp = string(packet.get(), nb_packet);
     
     return err;
 }
@@ -400,19 +398,17 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
     //      sequenceParameterSetNALUnit
 
     // use simple mode: nalu size + nalu data
-    /**/
-	// pps size
+
     int pps_size = 0;
     for (std::vector<std::string>::iterator it = pps.begin(); it != pps.end(); it++) {
         pps_size += 2 + it->length();
     }
 
     int nb_packet = 23 + 5 + (int)vps.length() + 5 + (int)sps.length() + 5 + pps_size - 2;
-    char* packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
 
     // use stream to generate the hevc packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
 
     SrsFormat format;
     if ((err = format.initialize()) != srs_success) {
@@ -505,8 +501,7 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
         // numOfPictureParameterSets
         stream.write_2bytes(pps.size());
 
-        for (std::vector<std::string>::iterator it = pps.begin(); it != pps.end(); it++)
-        {
+        for (std::vector<std::string>::iterator it = pps.begin(); it != pps.end(); it++) {
             //pictureParameterSetLength
             stream.write_2bytes((int16_t)it->length());
             //pictureParameterSetNALUnit
@@ -514,7 +509,7 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
         }
     }
 
-    hvcC = string(packet, nb_packet);
+    hvcC = string(packet.get(), nb_packet);
 
     return err;
 }
@@ -528,11 +523,10 @@ srs_error_t SrsRawHEVCStream::mux_ipb_frame(char *frame, int nb_frame, std::stri
     // Nbytes of nalu.
     //      NALUnit
     int nb_packet = 4 + nb_frame;
-    char *packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
 
     // use stream to generate the h265 packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
 
     // 5.3.4.2.1 Syntax, ISO_IEC_14496-15-AVC-format-2012.pdf, page 16
     // lengthSizeMinusOne, or NAL_unit_length, always use 4bytes size
@@ -545,7 +539,7 @@ srs_error_t SrsRawHEVCStream::mux_ipb_frame(char *frame, int nb_frame, std::stri
     // NALUnit
     stream.write_bytes(frame, nb_frame);
 
-    ibp = string(packet, nb_packet);
+    ibp = string(packet.get(), nb_packet);
 
     return err;
 }

@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #include <srs_app_threads.hpp>
@@ -49,7 +49,7 @@ using namespace std;
 
 // These functions first appeared in glibc in version 2.12.
 // See https://man7.org/linux/man-pages/man3/pthread_setname_np.3.html
-#if defined(SRS_CYGWIN64) || (defined(SRS_CROSSBUILD) && ((__GLIBC__ < 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 12)))
+#if defined(SRS_CYGWIN64) || (defined(SRS_CROSSBUILD) && defined(__GLIBC__) && ((__GLIBC__ < 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 12)))
     void pthread_setname_np(pthread_t trd, const char* name) {
     }
 #endif
@@ -268,10 +268,9 @@ srs_error_t SrsCircuitBreaker::on_timer(srs_utime_t interval)
     // The hybrid thread cpu and memory.
     float thread_percent = stat->percent * 100;
 
-    static char buf[128];
-
     string snk_desc;
 #ifdef SRS_RTC
+    static char buf[128];
     if (_srs_pps_snack2->r10s()) {
         snprintf(buf, sizeof(buf), ", snk=%d,%d,%d",
             _srs_pps_snack2->r10s(), _srs_pps_snack3->r10s(), _srs_pps_snack4->r10s() // NACK packet,seqs sent.
@@ -335,7 +334,6 @@ srs_error_t srs_global_initialize()
 #ifdef SRS_GB28181
     _srs_gb_manager = new SrsResourceManager("GB", true);
 #endif
-    _srs_gc = new SrsLazySweepGc();
 
     // Initialize global pps, which depends on _srs_clock
     _srs_pps_ids = new SrsPps();
