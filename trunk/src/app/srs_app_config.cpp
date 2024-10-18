@@ -8887,7 +8887,7 @@ bool SrsConfig::get_pull_auth()
         return DEFAULT;
     }
 
-    return SRS_CONF_PERFER_TRUE(conf->arg0());
+    return SRS_CONF_PREFER_TRUE(conf->arg0());
 }
 
 std::string SrsConfig::get_pull_auth_url()
