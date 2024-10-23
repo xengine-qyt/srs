@@ -512,11 +512,11 @@ srs_error_t SrsRtmpConn::stream_service_cycle()
 
 	if (SrsRtmpConnFMLEPublish == info->type || SrsRtmpConnFlashPublish == info->type || \
 		SrsRtmpConnHaivisionPublish == info->type || SrsRtcConnPublish == info->type) {
-		if (_srs_config->get_pull_auth()) {
-            req->stream = md5_16_little(req->stream);
-		}
 		if ((err = Stream_ID_Check(req->stream)) != srs_success) {
 			return srs_error_new(ERROR_RTMP_REQ_CONNECT, "rtmp stream:%s not registered", req->stream.c_str());
+		}
+		if (_srs_config->get_pull_auth()) {
+            req->stream = md5_16_little(req->stream);
 		}
 		srs_trace("rtmp stream:%s registered", req->stream.c_str());
 	}

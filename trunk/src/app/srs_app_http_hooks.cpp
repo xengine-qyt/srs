@@ -681,7 +681,7 @@ srs_error_t Stream_ID_Check(std::string stream_id)
         return srs_error_new(ERROR_HTTP_DATA_INVALID, "http: empty response");
     }
 
-    srs_trace("%s:res:%s\n",__func__,res.c_str());
+    srs_trace("res:%s\n", res.c_str());
 
     size_t pos = res.find("true");
     if (pos == -1)
