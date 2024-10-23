@@ -283,11 +283,11 @@ srs_error_t SrsMpegtsSrtConn::do_cycle()
    
 	if (mode == SrtModePush)
 	{
-		if (_srs_config->get_pull_auth()) {
-			req_->stream = md5_16_little(req_->stream.c_str());
-		}
 		if (Stream_ID_Check(req_->stream.c_str()) != srs_success) {
 			return srs_error_new(ERROR_SRT_CONN, "srt stream:%s not registered", req_->stream.c_str());
+		}
+		if (_srs_config->get_pull_auth()) {
+			req_->stream = md5_16_little(req_->stream.c_str());
 		}
         srs_trace("srt stream:%s registered", req_->stream.c_str());
 	}
