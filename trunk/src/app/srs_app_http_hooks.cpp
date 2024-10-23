@@ -659,6 +659,7 @@ srs_error_t Stream_ID_Check(std::string stream_id)
     }
     string m_StrTmp = "curl " + _srs_config->get_pull_auth_url();
     sprintf(cmd, m_StrTmp.c_str(), stream_id.c_str());
+    srs_trace("Stream_ID_Check,id url:%s", cmd);
 
 	fp = popen(cmd, "r");
 	if (fp == NULL)
@@ -680,7 +681,7 @@ srs_error_t Stream_ID_Check(std::string stream_id)
         return srs_error_new(ERROR_HTTP_DATA_INVALID, "http: empty response");
     }
 
-    // srs_trace("\n%s:res:%s\n",__func__,res.c_str());
+    srs_trace("%s:res:%s\n",__func__,res.c_str());
 
     size_t pos = res.find("true");
     if (pos == -1)
