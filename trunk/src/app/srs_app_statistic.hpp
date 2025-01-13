@@ -57,8 +57,7 @@ public:
     bool active;
     // The publisher connection id.
     std::string publisher_id;
-    int nb_clients;
-    int nb_players;
+	int nb_clients;
 public:
     // The stream total kbps.
     SrsKbps* kbps;

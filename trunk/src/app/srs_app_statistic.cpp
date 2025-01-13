@@ -97,7 +97,6 @@ SrsStatisticStream::SrsStatisticStream()
     kbps = new SrsKbps();
 
     nb_clients = 0;
-	nb_players = 0;
     frames = new SrsPps();
 }
 
@@ -444,10 +443,7 @@ srs_error_t SrsStatistic::on_client(std::string id, SrsRequest* req, ISrsExpire*
     stream->nb_clients++;
     vhost->nb_clients++;
 
-    if ((client->type == SrsRtmpConnPlay) || (client->type == SrsHlsPlay) || (client->type == SrsFlvPlay) || (client->type == SrsRtcConnPlay) || (client->type == SrsSrtConnPlay))
-    {
-        client->nb_players++;
-    }
+	
     // The req might be freed, in such as SrsLiveStream::update, so we must copy it.
     // @see https://github.com/ossrs/srs/issues/2311
     srs_freep(client->req);
@@ -456,11 +452,13 @@ srs_error_t SrsStatistic::on_client(std::string id, SrsRequest* req, ISrsExpire*
     nb_clients_++;
 
 	int max_streams = _srs_config->get_max_playstreams() + 1;
-	if (stream->nb_players >= max_streams) {
-		return srs_error_new(ERROR_EXCEED_CONNECTIONS, "drop id=%s, max=%d, cur=%d for exceed play stream limits",
-			id.c_str(), max_streams, stream->nb_clients);
+	if ((client->type == SrsRtmpConnPlay) || (client->type == SrsHlsPlay) || (client->type == SrsFlvPlay) || (client->type == SrsRtcConnPlay) || (client->type == SrsSrtConnPlay))
+	{
+		if (stream->nb_clients >= max_streams) {
+			return srs_error_new(ERROR_EXCEED_CONNECTIONS, "drop id=%s, max=%d, cur=%d for exceed play stream limits",
+				id.c_str(), max_streams, stream->nb_clients);
+		}
 	}
-    
     return err;
 }
 
