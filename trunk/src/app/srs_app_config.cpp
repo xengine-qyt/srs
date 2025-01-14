@@ -2339,7 +2339,7 @@ srs_error_t SrsConfig::check_normal_config()
         SrsConfDirective* conf = root->at(i);
         std::string n = conf->name;
         if (n != "listen" && n != "pid" && n != "chunk_size" && n != "ff_log_dir"
-            && n != "srs_log_tank" && n != "srs_log_level" && n != "srs_log_level_v2" && n != "srs_log_file"
+            && n != "srs_log_tank" && n != "srs_log_size" && n != "srs_log_level" && n != "srs_log_level_v2" && n != "srs_log_file"
             && n != "max_connections" && n != "max_playstreams" && n != "daemon" && n != "heartbeat" && n != "tencentcloud_apm"
             && n != "http_api" && n != "stats" && n != "vhost" && n != "pithy_print_ms"
             && n != "http_server" && n != "stream_caster" && n != "rtc_server" && n != "srt_server"
@@ -6640,6 +6640,21 @@ bool SrsConfig::get_log_tank_file()
     }
     
     return conf->arg0() != "console";
+}
+int64_t SrsConfig::get_log_tank_size()
+{
+	if (!srs_getenv("srs.srs_log_size").empty()) {
+		return ::atol(srs_getenv("srs.srs_log_size").c_str());
+	}
+
+	static int64_t DEFAULT = 1024 * 1024 * 2;
+
+	SrsConfDirective* conf = root->get("srs_log_size");
+	if (!conf || conf->arg0().empty()) {
+		return DEFAULT;
+	}
+
+	return ::atol(conf->arg0().c_str());
 }
 
 string SrsConfig::get_log_level()

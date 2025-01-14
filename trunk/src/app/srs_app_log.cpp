@@ -33,6 +33,7 @@ SrsFileLog::SrsFileLog()
     level_ = SrsLogLevelTrace;
     log_data = new char[LOG_MAX_SIZE];
     
+    nLogSize = 0;
     fd = -1;
     log_to_file_tank = false;
     utc = false;
@@ -150,7 +151,14 @@ void SrsFileLog::write_log(int& fd, char *str_log, int size, int level)
         
         return;
     }
+    nLogSize += size;
     
+    if (nLogSize > _srs_config->get_log_tank_size())
+    {
+        nLogSize = 0;
+        remove(_srs_config->get_log_file().c_str());
+        open_log_file();
+    }
     // open log file. if specified
     if (fd < 0) {
         open_log_file();

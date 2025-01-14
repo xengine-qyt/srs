@@ -55,6 +55,8 @@ public:
 private:
     virtual void write_log(int& fd, char* str_log, int size, int level);
     virtual void open_log_file();
+private:
+    int64_t nLogSize;
 };
 
 #endif
