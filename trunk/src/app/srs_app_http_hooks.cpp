@@ -684,7 +684,7 @@ srs_error_t Stream_ID_Check(std::string stream_id)
     srs_trace("res:%s\n", res.c_str());
 
     size_t pos = res.find("true");
-    if (pos == -1)
+    if (pos == std::string::npos)
     {
         return srs_error_new(ERROR_HTTP_DATA_INVALID, "Stream_ID_Check: false");
     }
